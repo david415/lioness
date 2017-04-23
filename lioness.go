@@ -45,9 +45,8 @@ func Encrypt(key [KeySize]byte, iv [IVSize]byte, dst, src []byte) error {
 		return ErrBlockSize
 	}
 
-	rSize := len(dst) - lSize
-	l := make([]byte, lSize)
-	r := make([]byte, rSize)
+	var l [lSize]byte
+	r := make([]byte, len(dst)-lSize)
 	var tmp [lSize + IVSize/4]byte
 	defer zeroBytes(tmp[:])
 
@@ -84,11 +83,11 @@ func Encrypt(key [KeySize]byte, iv [IVSize]byte, dst, src []byte) error {
 	defer h.Reset()
 	h.Write(r)
 	htmp := h.Sum(nil)
-	xorBytes32(l, src[0:lSize], htmp)
-	htmp = htmp[:0]
+	defer zeroBytes(htmp)
+	xorBytes32(l[:], src[0:lSize], htmp)
 
 	// R = ChaCha20(L ^ k3, iv3, R)
-	xorBytes32(tmp[:lSize], l, k3)
+	xorBytes32(tmp[:lSize], l[:], k3)
 	if err := s.ReKey(tmp[:lSize], iv3); err != nil {
 		return err
 	}
@@ -103,11 +102,11 @@ func Encrypt(key [KeySize]byte, iv [IVSize]byte, dst, src []byte) error {
 	}
 	defer hh.Reset()
 	hh.Write(r)
+	htmp = htmp[:0]
 	htmp = hh.Sum(htmp)
-	defer zeroBytes(htmp)
-	xorBytes32(l, l, htmp)
+	xorBytes32(l[:], l[:], htmp)
 
-	copy(dst, l)
+	copy(dst, l[:])
 	copy(dst[lSize:], r)
 
 	return nil
@@ -130,9 +129,8 @@ func Decrypt(key [KeySize]byte, iv [IVSize]byte, dst, src []byte) error {
 	iv3 := iv[24:36]
 	iv4 := iv[36:48]
 
-	rSize := len(dst) - lSize
-	l := make([]byte, lSize)
-	r := make([]byte, rSize)
+	var l [lSize]byte
+	r := make([]byte, len(dst)-lSize)
 	var tmp [lSize + IVSize/4]byte
 	defer zeroBytes(tmp[:])
 
@@ -153,11 +151,11 @@ func Decrypt(key [KeySize]byte, iv [IVSize]byte, dst, src []byte) error {
 	defer h.Reset()
 	h.Write(src[lSize:])
 	htmp := h.Sum(nil)
-	xorBytes32(l, src[0:lSize], htmp)
-	htmp = htmp[:0]
+	defer zeroBytes(htmp)
+	xorBytes32(l[:], src[0:lSize], htmp)
 
 	// R = ChaCha20(L ^ k3, iv3, R)
-	xorBytes32(tmp[:lSize], l, k3)
+	xorBytes32(tmp[:lSize], l[:], k3)
 	if err := s.ReKey(tmp[:lSize], iv3); err != nil {
 		return err
 	}
@@ -172,18 +170,18 @@ func Decrypt(key [KeySize]byte, iv [IVSize]byte, dst, src []byte) error {
 	}
 	defer hh.Reset()
 	hh.Write(r)
+	htmp = htmp[:0]
 	htmp = hh.Sum(htmp)
-	defer zeroBytes(htmp)
-	xorBytes32(l, l, htmp)
+	xorBytes32(l[:], l[:], htmp)
 
 	// R = ChaCha20(L ^ k1, iv1, R)
-	xorBytes32(tmp[:lSize], l, k1)
+	xorBytes32(tmp[:lSize], l[:], k1)
 	if err := s.ReKey(tmp[:lSize], iv1); err != nil {
 		return err
 	}
 	s.XORKeyStream(r, r)
 
-	copy(dst, l)
+	copy(dst, l[:])
 	copy(dst[lSize:], r)
 
 	return nil
