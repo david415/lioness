@@ -201,6 +201,11 @@ func xorBytes32Ref(dst, a, b []byte) {
 }
 
 func zeroBytes(a []byte) {
+	// Note: Before you freak the fuck out and try to optimize this,
+	// the compiler has a special case for it.
+	//
+	// See: https://github.com/golang/go/issues/5373
+
 	for i := range a {
 		a[i] = 0
 	}
