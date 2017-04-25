@@ -25,7 +25,7 @@ const (
 	MinBlockSize = 32 + 1
 
 	// MaxBlockSize is the maximum block size in bytes.
-	MaxBlockSize = 32 + (64 *  (1 << 32))
+	MaxBlockSize = 32 + (64 * (1 << 32))
 
 	lSize = chacha20.KeySize
 )
